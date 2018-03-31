@@ -56,6 +56,8 @@ defmodule Todo.ProcessRegistry do
   end
 
   defp deregister_pid(process_registry, pid) do
-    %{}
+    process_registry
+    |> Enum.filter(fn({_alias, process}) -> process != pid end)
+    |> Enum.into(%{})
   end
 end
