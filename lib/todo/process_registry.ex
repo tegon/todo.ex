@@ -17,7 +17,10 @@ defmodule Todo.ProcessRegistry do
   end
 
   def whereis_name(key) do
-    GenServer.call(:process_registry, {:whereis_name, key})
+    case :ets.lookup(:process_registry, key) do
+      [{^key, value}] -> value
+      _ -> :undefined
+    end
   end
 
   def send(key, message) do
@@ -30,34 +33,27 @@ defmodule Todo.ProcessRegistry do
   end
 
   def init(_) do
-    {:ok, %{}}
+    :ets.new(:process_registry, [:set, :named_table, :protected])
+    {:ok, nil}
   end
 
-  def handle_call({:register_name, key, pid}, _from, process_registry) do
-    case Map.get(process_registry, key) do
-      nil ->
-        Process.monitor(pid)
-        {:reply, :yes, Map.put(process_registry, key, pid)}
-      _ ->
-        {:reply, :no, process_registry}
-    end
+  def handle_call({:register_name, key, pid}, _from, state) do
+    Process.monitor(pid)
+    :ets.insert(:process_registry, {key, pid})
+    {:reply, :yes, state}
   end
 
-  def handle_call({:whereis_name, key}, _from, process_registry) do
-    {:reply, Map.get(process_registry, key, :undefined), process_registry}
+  def handle_cast({:unregister_name, key}, state) do
+    :ets.delete(:process_registry, key)
+    {:noreply, state}
   end
 
-  def handle_cast({:unregister_name, key}, process_registry) do
-    {:noreply, Map.delete(process_registry, key)}
+  def handle_info({:DOWN, _, :process, pid, _}, state) do
+    deregister_pid(pid)
+    {:noreply, state}
   end
 
-  def handle_info({:DOWN, _, :process, pid, _}, process_registry) do
-    {:noreply, deregister_pid(process_registry, pid)}
-  end
-
-  defp deregister_pid(process_registry, pid) do
-    process_registry
-    |> Enum.filter(fn({_alias, process}) -> process != pid end)
-    |> Enum.into(%{})
+  defp deregister_pid(pid) do
+    :ets.match_delete(:process_registry, {:_, pid})
   end
 end
