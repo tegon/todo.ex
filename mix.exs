@@ -14,13 +14,16 @@ defmodule Todo.Mixfile do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger],
+      extra_applications: [:logger, :grpoc],
       mod: {Todo.Application, []}
     ]
   end
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
-    [{:meck, "0.8.2", only: :test}]
+    [
+      {:gproc, "0.3.1"},
+      {:meck, "0.8.2", only: :test}
+    ]
   end
 end
