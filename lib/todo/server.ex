@@ -29,7 +29,7 @@ defmodule Todo.Server do
   def start_link(list_name) do
     IO.puts "Starting to-do server for #{list_name}."
 
-    GenServer.start_link(__MODULE__, list_name, name: via_tuple(list_name))
+    GenServer.start_link(__MODULE__, list_name, name: {:global, {:todo_server, list_name}})
   end
 
   def add_entry(todo_server, new_entry) do
@@ -49,10 +49,6 @@ defmodule Todo.Server do
   end
 
   def whereis(list_name) do
-    :gproc.whereis_name({:n, :l, {:todo_server, list_name}})
-  end
-
-  defp via_tuple(list_name) do
-    {:via, :gproc, {:n, :l, {:todo_server, list_name}}}
+    :global.whereis_name({:todo_server, list_name})
   end
 end
